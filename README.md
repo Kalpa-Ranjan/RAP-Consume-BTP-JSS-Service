@@ -16,6 +16,7 @@ End-to-end architecture and implementation guide for calling the **SAP Job Sched
 - [System Specifications](#-system-specifications)
 - [BTP Cockpit Destination Configuration](#-btp-cockpit-destination-configuration)
 - [End-to-End Architecture Diagram](#-end-to-end-architecture-diagram)
+  - [Diagram Color & Notation Key](#-diagram-color--notation-key)
 - [Step-by-Step Implementation Guide](#-step-by-step-implementation-guide)
   - [Step 1 · Create Service Consumption Model (EDMX)](#step-1--create-service-consumption-model-edmx)
   - [Step 2 · Create Outbound Service](#step-2--create-outbound-service)
@@ -148,6 +149,20 @@ flowchart TD
     style JOBSCHED fill:#c7d2fe,stroke:#4338ca,stroke-width:1.5px,color:#0f172a
     style RESP fill:#4ade80,stroke:#15803d,stroke-width:2px,color:#0f172a
 ```
+
+### 🎨 Diagram Color & Notation Key
+
+| Icon / Element | Category | Description |
+| :--- | :--- | :--- |
+| 🎨 **Sky Blue (`#f0f9ff`)** | **Layer 1: Design Time** | Eclipse ADT Developer Artifacts (`EDMX`, `ZJSSSERVICECONSUMPTION`, `ZOUTBOUNDSERVICE_REST`, `ZJSS_COMM_SCENARIO`). |
+| 🔐 **Emerald Green (`#f0fdf4`)** | **Layer 2: Admin Config** | Fiori Launchpad Admin Setup (`SAP_COM_0276` Communication System & Arrangement). |
+| ⚡ **Soft Purple (`#faf5ff`)** | **Layer 3: ABAP Runtime** | Steampunk Runtime Code Execution (`ZCL_JSS_SERVICE_CALL` & HTTP Client Manager). |
+| ☁️ **Warm Amber (`#fff7ed`)** | **Layer 4: BTP Platform** | Subaccount Connectivity & Destination Service (`JSS` Destination). |
+| 🌐 **Indigo Blue (`#eef2ff`)** | **Layer 5: External Services** | Cloud Foundry External APIs (XSUAA OAuth2 Token Server & Job Scheduler REST API). |
+| ✅ **Emerald Green Node (`#4ade80`)** | **Response Payload** | Successful REST Execution Payload (`200 OK` JSON Job Data). |
+| **Solid Arrow (`-->`)** | **Design Reference** | Static design-time reference and artifact generation dependency flow. |
+| **Thick Bold Arrow (`==>`)** | **Runtime Execution** | Primary runtime API execution flow and OAuth2 token transaction. |
+| **Dotted Arrow (`-.->`)** | **Response / Type Return** | Asynchronous response return and proxy data type provision. |
 
 ---
 
