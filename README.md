@@ -15,8 +15,6 @@ End-to-end architecture and implementation guide for calling the **SAP Job Sched
 ## 📋 Table of Contents
 - [System Specifications](#-system-specifications)
 - [BTP Cockpit Destination Configuration](#-btp-cockpit-destination-configuration)
-- [Package Structure — ZJSS (5 Objects)](#-package-structure--zjss-5-objects)
-- [Object Flow Diagram](#-object-flow-diagram)
 - [End-to-End Architecture Diagram](#-end-to-end-architecture-diagram)
 - [Step-by-Step Implementation Guide](#-step-by-step-implementation-guide)
   - [Step 1 · Create Service Consumption Model (EDMX)](#step-1--create-service-consumption-model-edmx)
@@ -28,6 +26,9 @@ End-to-end architecture and implementation guide for calling the **SAP Job Sched
   - [Step 7 · Write ABAP Code](#step-7--write-abap-code)
   - [Step 8 · Response Payload](#step-8--response-payload)
 - [Object-by-Object Detailed Breakdown](#-object-by-object-detailed-breakdown)
+  - [Package Structure — ZJSS (5 Objects)](#package-structure--zjss-5-objects)
+  - [Object Flow Diagram](#object-flow-diagram)
+  - [Detailed Breakdown & Analogies](#detailed-breakdown--analogies)
 - [ABAP Source Code](#-abap-source-code)
 - [Artifacts Summary](#-artifacts-summary)
 
@@ -56,63 +57,6 @@ A destination named **`JSS`** must be configured in BTP Cockpit under your subac
 | **Authentication** | `OAuth2ClientCredentials` |
 | **Client ID** | `sb-228520c9-2109-4c48-a1d0-0f9eaaf64bfc|sap-jobscheduler!b1` |
 | **Token Service URL** | `https://7e221c01trial.authentication.us10.hana.ondemand.com/oauth/token` |
-
----
-
-## 📦 Package Structure — `ZJSS` (5 Objects)
-
-```text
-TRL_EN [TRL, 100, CB9980005587, EN]
-└── Favorite Packages
-    └── ZJSS (5 objects)
-        ├── Business Services
-        │   └── Service Consumption Models
-        │       └── ZJSSSERVICECONSUMPTION          Job Scheduler Service Consumption
-        ├── Cloud Communication Management
-        │   ├── Communication Scenarios
-        │   │   └── ZJSS_COMM_SCENARIO             Communication Scenario
-        │   │       └── Outbound Service
-        │   │           └── ZOUTBOUNDSERVICE_REST      (referenced)
-        │   └── Outbound Services
-        │       └── ZOUTBOUNDSERVICE_REST          HTTP Outbound Service
-        └── Source Code Library
-            └── Classes
-                ├── ZCL_JSS_SERVICE_CALL           Call BTP Job Scheduler API
-                │   ├── IF_OO_ADT_CLASSRUN~MAIN    (method)
-                │   └── ZCL_JSS_SERVICE_CALL       (text elements)
-                └── ZJSSSERVICECONSUMPTION          Consumption Model (generated proxy class)
-```
-
----
-
-## 🔄 Object Flow Diagram
-
-```mermaid
-%%{init: {'themeVariables': { 'curve': 'linear' }}}%%
-flowchart TD
-    subgraph Pkg ["Package ZJSS (5 Objects)"]
-        EDMX["EDMX Metadata File"] -->|Import| SCM["ZJSSSERVICECONSUMPTION\nService Consumption Model"]
-        SCM -->|Generates| OUT["ZOUTBOUNDSERVICE_REST\nOutbound Service (HTTP)"]
-        SCM -->|Generates| PROXY["ZJSSSERVICECONSUMPTION\nGenerated Proxy Class"]
-        OUT -->|Referenced by| SCEN["ZJSS_COMM_SCENARIO\nCommunication Scenario"]
-    end
-
-    subgraph Admin ["Admin Configuration"]
-        SCEN -->|Consumed by Admin| CA["Communication Arrangement\nSAP_COM_0276"]
-    end
-
-    subgraph Runtime ["Runtime Execution"]
-        CA -->|Enables| CLS["ZCL_JSS_SERVICE_CALL\nABAP Class Runner"]
-        PROXY -.->|Provides Data Types| CLS
-    end
-
-    style SCM fill:#6dbfb0,stroke:#0f766e,stroke-width:2px,color:#000
-    style OUT fill:#6dbfb0,stroke:#0f766e,stroke-width:2px,color:#000
-    style PROXY fill:#6dbfb0,stroke:#0f766e,stroke-width:2px,color:#000
-    style SCEN fill:#6dbfb0,stroke:#0f766e,stroke-width:2px,color:#000
-    style CA fill:#86efac,stroke:#15803d,stroke-width:2px,color:#000
-    style CLS fill:#c084fc,stroke:#6b21a8,stroke-width:2px,color:#000
-```
 
 ---
 
@@ -253,6 +197,94 @@ Sample JSON response output returned by GET `/scheduler/jobs`:
 
 ---
 
+## 📖 Object-by-Object Detailed Breakdown
+
+### Package Structure — `ZJSS` (5 Objects)
+
+```text
+TRL_EN [TRL, 100, CB9980005587, EN]
+└── Favorite Packages
+    └── ZJSS (5 objects)
+        ├── Business Services
+        │   └── Service Consumption Models
+        │       └── ZJSSSERVICECONSUMPTION          Job Scheduler Service Consumption
+        ├── Cloud Communication Management
+        │   ├── Communication Scenarios
+        │   │   └── ZJSS_COMM_SCENARIO             Communication Scenario
+        │   │       └── Outbound Service
+        │   │           └── ZOUTBOUNDSERVICE_REST      (referenced)
+        │   └── Outbound Services
+        │       └── ZOUTBOUNDSERVICE_REST          HTTP Outbound Service
+        └── Source Code Library
+            └── Classes
+                ├── ZCL_JSS_SERVICE_CALL           Call BTP Job Scheduler API
+                │   ├── IF_OO_ADT_CLASSRUN~MAIN    (method)
+                │   └── ZCL_JSS_SERVICE_CALL       (text elements)
+                └── ZJSSSERVICECONSUMPTION          Consumption Model (generated proxy class)
+```
+
+---
+
+### Object Flow Diagram
+
+```mermaid
+%%{init: {'themeVariables': { 'curve': 'linear' }}}%%
+flowchart TD
+    subgraph Pkg ["Package ZJSS (5 Objects)"]
+        EDMX["EDMX Metadata File"] -->|Import| SCM["ZJSSSERVICECONSUMPTION\nService Consumption Model"]
+        SCM -->|Generates| OUT["ZOUTBOUNDSERVICE_REST\nOutbound Service (HTTP)"]
+        SCM -->|Generates| PROXY["ZJSSSERVICECONSUMPTION\nGenerated Proxy Class"]
+        OUT -->|Referenced by| SCEN["ZJSS_COMM_SCENARIO\nCommunication Scenario"]
+    end
+
+    subgraph Admin ["Admin Configuration"]
+        SCEN -->|Consumed by Admin| CA["Communication Arrangement\nSAP_COM_0276"]
+    end
+
+    subgraph Runtime ["Runtime Execution"]
+        CA -->|Enables| CLS["ZCL_JSS_SERVICE_CALL\nABAP Class Runner"]
+        PROXY -.->|Provides Data Types| CLS
+    end
+
+    style SCM fill:#6dbfb0,stroke:#0f766e,stroke-width:2px,color:#000
+    style OUT fill:#6dbfb0,stroke:#0f766e,stroke-width:2px,color:#000
+    style PROXY fill:#6dbfb0,stroke:#0f766e,stroke-width:2px,color:#000
+    style SCEN fill:#6dbfb0,stroke:#0f766e,stroke-width:2px,color:#000
+    style CA fill:#86efac,stroke:#15803d,stroke-width:2px,color:#000
+    style CLS fill:#c084fc,stroke:#6b21a8,stroke-width:2px,color:#000
+```
+
+---
+
+### Detailed Breakdown & Analogies
+
+#### 1. `ZJSSSERVICECONSUMPTION` (Service Consumption Model)
+- **Location**: Business Services $\rightarrow$ Service Consumption Models
+- **Analogy**: API Client SDK Generator (like OpenAPI/Swagger spec to TypeScript).
+- **Purpose**: Generates ABAP proxy types (`tys_job`, `tyt_job`) and constants from the external EDMX specification.
+
+#### 2. `ZOUTBOUNDSERVICE_REST` (Outbound Service)
+- **Location**: Cloud Communication Management $\rightarrow$ Outbound Services
+- **Analogy**: Android manifest `uses-permission` declaration.
+- **Purpose**: Pure metadata registration declaring outbound HTTP communication intent to ABAP Cloud.
+
+#### 3. `ZJSS_COMM_SCENARIO` (Communication Scenario)
+- **Location**: Cloud Communication Management $\rightarrow$ Communication Scenarios
+- **Analogy**: Infrastructure Blueprint / Terraform Module.
+- **Purpose**: Bundles outbound services and permitted auth methods for admin consumption in Fiori Launchpad.
+
+#### 4. `ZCL_JSS_SERVICE_CALL` (ABAP Class Runner)
+- **Location**: Source Code Library $\rightarrow$ Classes
+- **Analogy**: MVC Controller.
+- **Purpose**: Executable runtime class (`if_oo_adt_classrun`) orchestrating destination lookup, HTTP execution, and console output.
+
+#### 5. `ZJSSSERVICECONSUMPTION` (Generated Proxy Class)
+- **Location**: Source Code Library $\rightarrow$ Classes
+- **Analogy**: TypeScript `.d.ts` type definition file.
+- **Purpose**: Generated class containing ABAP structures and constants for OData V4 client proxy calls.
+
+---
+
 ## 💻 ABAP Source Code
 
 ```abap
@@ -297,35 +329,6 @@ CLASS zcl_jss_service_call IMPLEMENTATION.
   ENDMETHOD.
 ENDCLASS.
 ```
-
----
-
-## 📖 Object-by-Object Detailed Breakdown
-
-### 1. `ZJSSSERVICECONSUMPTION` (Service Consumption Model)
-- **Location**: Business Services $\rightarrow$ Service Consumption Models
-- **Analogy**: API Client SDK Generator (like OpenAPI/Swagger spec to TypeScript).
-- **Purpose**: Generates ABAP proxy types (`tys_job`, `tyt_job`) and constants from the external EDMX specification.
-
-### 2. `ZOUTBOUNDSERVICE_REST` (Outbound Service)
-- **Location**: Cloud Communication Management $\rightarrow$ Outbound Services
-- **Analogy**: Android manifest `uses-permission` declaration.
-- **Purpose**: Pure metadata registration declaring outbound HTTP communication intent to ABAP Cloud.
-
-### 3. `ZJSS_COMM_SCENARIO` (Communication Scenario)
-- **Location**: Cloud Communication Management $\rightarrow$ Communication Scenarios
-- **Analogy**: Infrastructure Blueprint / Terraform Module.
-- **Purpose**: Bundles outbound services and permitted auth methods for admin consumption in Fiori Launchpad.
-
-### 4. `ZCL_JSS_SERVICE_CALL` (ABAP Class Runner)
-- **Location**: Source Code Library $\rightarrow$ Classes
-- **Analogy**: MVC Controller.
-- **Purpose**: Executable runtime class (`if_oo_adt_classrun`) orchestrating destination lookup, HTTP execution, and console output.
-
-### 5. `ZJSSSERVICECONSUMPTION` (Generated Proxy Class)
-- **Location**: Source Code Library $\rightarrow$ Classes
-- **Analogy**: TypeScript `.d.ts` type definition file.
-- **Purpose**: Generated class containing ABAP structures and constants for OData V4 client proxy calls.
 
 ---
 
