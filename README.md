@@ -63,63 +63,90 @@ A destination named **`JSS`** must be configured in BTP Cockpit under your subac
 ## 🏗️ End-to-End Architecture Diagram
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'curve': 'linear' }}}%%
 flowchart TD
-    subgraph DT["DESIGN TIME - Eclipse ADT"]
-        SCM["ZJSSSERVICECONSUMPTION\nService Consumption Model - EDMX"]
-        OS["ZOUTBOUNDSERVICE_REST\nHTTP Outbound Service"]
-        CS["ZJSS_COMM_SCENARIO\nCommunication Scenario"]
-        SCM -->|generates| OS
-        OS -->|referenced by| CS
+    subgraph L1 ["🎨 LAYER 1 · DESIGN TIME (Eclipse ADT)"]
+        direction TB
+        EDMX["📄 EDMX Metadata File\nJob Scheduler OData V4 Spec"]
+        SCM["📦 ZJSSSERVICECONSUMPTION\nService Consumption Model"]
+        OS["🔌 ZOUTBOUNDSERVICE_REST\nHTTP Outbound Service Declaration"]
+        PROXY["🧩 ZJSSSERVICECONSUMPTION\nGenerated ABAP Proxy Class (Types)"]
+        CS["📜 ZJSS_COMM_SCENARIO\nCommunication Scenario Template"]
+
+        EDMX -->|"Import EDMX Wizard"| SCM
+        SCM -->|"Generates"| OS
+        SCM -->|"Generates"| PROXY
+        OS -->|"Referenced in Outbound Tab"| CS
     end
 
-    subgraph AC["ADMIN CONFIG - Fiori Launchpad"]
-        CSYS["Communication System\nSAP_COM_0276 - Destination Service"]
-        CA["Communication Arrangement\nSAP_COM_0276 - Enables destination lookup"]
-        CSYS -->|binds| CA
+    subgraph L2 ["🔐 LAYER 2 · ADMIN CONFIGURATION (Fiori Launchpad)"]
+        direction TB
+        CSYS["💻 Communication System\nSAP_COM_0276 (Destination Service)"]
+        CARR["📋 Communication Arrangement\nSAP_COM_0276 (Activates Destination Lookup)"]
+
+        CSYS -->|"Binds System to Scenario"| CARR
     end
 
-    subgraph RT["RUNTIME - ABAP Code"]
-        CLS["ZCL_JSS_SERVICE_CALL\ncreate_by_cloud_destination JSS"]
-        URI["set_uri_path\n/scheduler/jobs"]
-        API["GET /scheduler/jobs\nToken auto-injected by framework"]
-        CLS --> URI
-        URI --> API
+    subgraph L3 ["⚡ LAYER 3 · ABAP RUNTIME (BTP ABAP Steampunk)"]
+        direction TB
+        CLASSRUN["🚀 ZCL_JSS_SERVICE_CALL\nif_oo_adt_classrun~main"]
+        DEST_PROV["🔍 cl_http_destination_provider\ncreate_by_cloud_destination('JSS')"]
+        HTTP_MGR["🌐 cl_web_http_client_manager\ncreate_by_http_destination(lo_dest)"]
+        REQ["SET URI PATH\nset_uri_path('/scheduler/jobs')"]
+        EXEC["EXECUTE REQUEST\nexecute( if_web_http_client=>get )"]
+
+        CLASSRUN -->|"Step 1: Resolve Destination"| DEST_PROV
+        DEST_PROV -->|"Step 2: Create Client"| HTTP_MGR
+        HTTP_MGR -->|"Step 3: Build Request"| REQ
+        REQ -->|"Step 4: Execute Call"| EXEC
     end
 
-    subgraph BP["BTP PLATFORM - Destination Service"]
-        DST["Destination JSS\nOAuth2ClientCredentials\nURL - Client ID - Secret - Token URL"]
+    subgraph L4 ["☁️ LAYER 4 · BTP PLATFORM (Connectivity & Destination Service)"]
+        direction TB
+        DEST["🔑 BTP Destination 'JSS'\nURL: .../scheduler\nAuth: OAuth2ClientCredentials\nClient ID | Secret | Token URL"]
     end
 
-    subgraph EX["EXTERNAL SERVICES - Cloud Foundry"]
-        XSUAA["XSUAA\nOAuth2 Token Server"]
-        JSS["Job Scheduler\nREST API"]
+    subgraph L5 ["🌐 LAYER 5 · EXTERNAL CLOUD FOUNDRY SERVICES"]
+        direction TB
+        XSUAA["🔒 XSUAA Authentication Server\nOAuth2 Token Endpoint (/oauth/token)"]
+        JOBSCHED["⏱️ SAP BTP Job Scheduler REST API\nEndpoint: /scheduler/jobs"]
+        RESP["✅ 200 OK Response Payload\nJSON List of Scheduled Jobs"]
+
+        JOBSCHED -->|"Returns Data"| RESP
     end
 
-    CS -->|used by| CA
-    CA -->|provides destination| CLS
-    API -->|destination lookup| DST
-    DST -.->|auto token fetch| XSUAA
-    DST -->|API call + Bearer| JSS
-    JSS --> RES["200 OK - Job Data Returned"]
+    %% Cross-Layer Interconnections
+    CS -->|"Published to Admin"| CARR
+    DEST_PROV -.->|"Enables Lookup via"| CARR
+    DEST_PROV ==>|"Looks up Destination"| DEST
+    DEST ==>|"1. Request Token"| XSUAA
+    XSUAA -.->|"2. Bearer Access Token"| DEST
+    EXEC ==>|"3. HTTP GET + Bearer Token"| JOBSCHED
+    RESP -.->|"4. Response to Console"| CLASSRUN
+    PROXY -.->|"Provides Types (tys_job)"| CLASSRUN
 
-    style DT fill:#E0F2F1,stroke:#009688,stroke-width:2px,color:#004D40
-    style AC fill:#E8F5E9,stroke:#4CAF50,stroke-width:2px,color:#1B5E20
-    style RT fill:#EDE7F6,stroke:#7E57C2,stroke-width:2px,color:#311B92
-    style BP fill:#FFF3E0,stroke:#FF9800,stroke-width:2px,color:#E65100
-    style EX fill:#E3F2FD,stroke:#1976D2,stroke-width:2px,color:#0D47A1
+    %% Custom Styling Tokens
+    style L1 fill:#f0f9ff,stroke:#0284c7,stroke-width:2px,color:#0369a1
+    style L2 fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#15803d
+    style L3 fill:#faf5ff,stroke:#9333ea,stroke-width:2px,color:#7e22ce
+    style L4 fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#c2410c
+    style L5 fill:#eef2ff,stroke:#4f46e5,stroke-width:2px,color:#3730a3
 
-    style SCM fill:#B2DFDB,stroke:#00897B,stroke-width:1.5px,color:#004D40
-    style OS fill:#B2DFDB,stroke:#00897B,stroke-width:1.5px,color:#004D40
-    style CS fill:#80CBC4,stroke:#00796B,stroke-width:1.5px,color:#004D40
-    style CSYS fill:#C8E6C9,stroke:#43A047,stroke-width:1.5px,color:#1B5E20
-    style CA fill:#A5D6A7,stroke:#388E3C,stroke-width:1.5px,color:#1B5E20
-    style CLS fill:#D1C4E9,stroke:#7E57C2,stroke-width:1.5px,color:#311B92
-    style URI fill:#CE93D8,stroke:#8E24AA,stroke-width:1.5px,color:#4A148C
-    style API fill:#B39DDB,stroke:#5E35B1,stroke-width:1.5px,color:#311B92
-    style DST fill:#FFE0B2,stroke:#FB8C00,stroke-width:1.5px,color:#E65100
-    style XSUAA fill:#FFCC80,stroke:#EF6C00,stroke-width:1.5px,color:#BF360C
-    style JSS fill:#90CAF9,stroke:#1565C0,stroke-width:1.5px,color:#0D47A1
-    style RES fill:#C8E6C9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20
+    style SCM fill:#bae6fd,stroke:#0284c7,stroke-width:1.5px,color:#0f172a
+    style OS fill:#bae6fd,stroke:#0284c7,stroke-width:1.5px,color:#0f172a
+    style PROXY fill:#bae6fd,stroke:#0284c7,stroke-width:1.5px,color:#0f172a
+    style CS fill:#7dd3fc,stroke:#0369a1,stroke-width:1.5px,color:#0f172a
+    style CSYS fill:#bbf7d0,stroke:#16a34a,stroke-width:1.5px,color:#0f172a
+    style CARR fill:#86efac,stroke:#15803d,stroke-width:1.5px,color:#0f172a
+    style CLASSRUN fill:#e9d5ff,stroke:#9333ea,stroke-width:1.5px,color:#0f172a
+    style DEST_PROV fill:#d8b4fe,stroke:#7e22ce,stroke-width:1.5px,color:#0f172a
+    style HTTP_MGR fill:#d8b4fe,stroke:#7e22ce,stroke-width:1.5px,color:#0f172a
+    style REQ fill:#c084fc,stroke:#6b21a8,stroke-width:1.5px,color:#0f172a
+    style EXEC fill:#a855f7,stroke:#581c87,stroke-width:1.5px,color:#fff
+    style DEST fill:#fed7aa,stroke:#ea580c,stroke-width:2px,color:#0f172a
+    style XSUAA fill:#fde68a,stroke:#d97706,stroke-width:1.5px,color:#0f172a
+    style JOBSCHED fill:#c7d2fe,stroke:#4338ca,stroke-width:1.5px,color:#0f172a
+    style RESP fill:#4ade80,stroke:#15803d,stroke-width:2px,color:#0f172a
 ```
 
 ---
